@@ -1,0 +1,24 @@
+From c4fe3e5d323df8dd2f7ca34dae96a7fd0ec1d702 Mon Sep 17 00:00:00 2001
+From: Andoni Morales Alastruey <ylatuya@gmail.com>
+Date: Tue, 30 Jul 2019 22:16:59 +0200
+Subject: [PATCH] Fix pixbuf memory leak
+
+---
+ gdk/Gdk.metadata | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/gdk/Gdk.metadata b/gdk/Gdk.metadata
+index 9436074..ca487dc 100644
+--- a/gdk/Gdk.metadata
++++ b/gdk/Gdk.metadata
+@@ -126,7 +126,6 @@
+   <attr path="/api/namespace/object[@cname='GdkPixbuf']/property" name="construct-only">true</attr>
+   <attr path="/api/namespace/struct[@cname='GdkPixbufFormat']/method[@name='GetExtensions']/return-type" name="null_term_array">1</attr> 
+   <attr path="/api/namespace/struct[@cname='GdkPixbufFormat']/method[@name='GetMimeTypes']/return-type" name="null_term_array">1</attr> 
+-  <attr path="/api/namespace/object[@cname='GdkPixbufLoader']/method[@name='GetPixbuf']/return-type" name="needs_ref">true</attr>
+   <attr path="/api/namespace/object[@cname='GdkPixbufLoader']/method[@name='Write']/*/*[@name='buf']" name="array">1</attr>
+   <attr path="/api/namespace/object[@cname='GdkPixmap']" name="parent">GdkDrawable</attr>
+   <attr path="/api/namespace/object[@cname='GdkPixmap']/method[@name='CreateFromXpm']/*/*[@name='mask']" name="pass_as">out</attr>
+-- 
+2.14.1
+

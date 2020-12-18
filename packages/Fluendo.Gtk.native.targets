@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!-- Get preferred architecture and platform -->
+    <PropertyGroup>
+        <!-- Handle VS 2017 live unit testing -->
+        <FluendoGTKArch Condition="'$(FluendoGTKArch)' == '' and '$(BuildingForLiveUnitTesting)' == 'true' and '$(PlatformTarget)' == ''">x86</FluendoGTKArch>
+        <!-- Handle 'x64' and 'x86' platform targets -->
+        <FluendoGTKArch Condition="'$(FluendoGTKArch)' == '' and '$(PlatformTarget)' == 'x64'">x86_64</FluendoGTKArch>
+        <FluendoGTKArch Condition="'$(FluendoGTKArch)' == '' and '$(PlatformTarget)' == 'x86'">x86</FluendoGTKArch>
+        <!-- Handle 'Any CPU': if Prefer32Bit is not enforced, we rely on OS detected architecture -->
+        <FluendoGTKArch Condition="'$(FluendoGTKArch)' == '' and '$(Prefer32Bit)' == 'true'">x86</FluendoGTKArch>
+        <FluendoGTKArch Condition="'$(FluendoGTKArch)' == '' and $([System.Environment]::Is64BitOperatingSystem)">x86_64</FluendoGTKArch>
+        <FluendoGTKArch Condition="'$(FluendoGTKArch)' == ''">x86</FluendoGTKArch>
+
+        <!-- Handle specific platform name for Windows, Linux and MacOSX -->
+        <FluendoGTKPlatform Condition="'$(FluendoGTKPlatform)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">win7-$(FluendoGTKArch)</FluendoGTKPlatform>
+        <FluendoGTKPlatform Condition="'$(FluendoGTKPlatform)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true'">linux-$(FluendoGTKArch)</FluendoGTKPlatform>
+        <FluendoGTKPlatform Condition="'$(FluendoGTKPlatform)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true'">osx</FluendoGTKPlatform>
+    </PropertyGroup>
+
+    <!-- Copy Fluendo.GTK native libraries to output directory -->
+    <ItemGroup>
+        <None Condition="Exists('$(MSBuildThisFileDirectory)..\runtime\$(FluendoGTKPlatform)\native')"
+              Include="$(MSBuildThisFileDirectory)..\runtime\$(FluendoGTKPlatform)\native\**"
+              Link="%(RecursiveDir)%(Filename)%(Extension)"
+              Visible="false"
+              CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+</Project>

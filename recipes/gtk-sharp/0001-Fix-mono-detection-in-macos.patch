@@ -1,0 +1,44 @@
+From eb63332a6a26b16ff740ce4ef34751f80654a7e9 Mon Sep 17 00:00:00 2001
+From: Andoni Morales Alastruey <ylatuya@gmail.com>
+Date: Tue, 30 Jul 2019 23:36:49 +0200
+Subject: [PATCH] Fix mono detection in macos
+
+---
+ configure.in.in | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/configure.in.in b/configure.in.in
+index dde7bce..a83654a 100644
+--- a/configure.in.in
++++ b/configure.in.in
+@@ -117,6 +117,11 @@ else
+ 	PKG_CHECK_MODULES(MONO_DEPENDENCY, mono >= $FIRST_MONO_VERSION_WITH_NET_4_6_SUPPORT, NET_4_6_SUPPORT=true, NET_4_6_SUPPORT=false)
+ fi
+ 
++AC_PATH_PROG(RUNTIME, mono, no)
++if test "x$RUNTIME" != "xno" ; then
++	has_mono="true"
++fi
++
+ if test "x$platform_win32" = "xyes"; then
+ 	NET_4_6_SUPPORT=true
+ fi
+@@ -132,14 +137,9 @@ if test "x$AL" = "xno" ; then
+ fi
+ 
+ if test "x$has_mono" = "xtrue"; then
++
+ GACUTIL_FLAGS='-package $(PACKAGE_VERSION) -gacdir $(DESTDIR)$(prefix)/lib'
+ GENERATED_SOURCES=generated/*.cs
+-AC_PATH_PROG(RUNTIME, mono, no)
+-
+-# If mono is found, it's in the path.  Require it to be in the path at runtime as well
+-if test "x$RUNTIME" != "xno" ; then
+-	RUNTIME=mono
+-fi
+ 
+ AC_PATH_PROG([CSC], mcs, no)
+ if test `uname -s` = "Darwin"; then
+-- 
+2.14.1
+

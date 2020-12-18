@@ -1,0 +1,23 @@
+import sys
+from cerbero.config import Architecture, Platform, Distro, DistroVersion
+
+packager = 'Fluendo S.A. <support@fluendo.com>'
+path = os.path.dirname(os.path.abspath(__file__))
+external_recipes = {'gtk': (os.path.join(path, 'recipes'), 1)}
+external_packages = {'gtk': (os.path.join(path, 'packages'), 1)}
+
+if target_platform == Platform.DARWIN:
+    target_arch = Architecture.X86_64
+
+allow_parallel_build=True
+variants.override('nocdparanoia')
+variants.override('nopython')
+variants.override('noalsa')
+variants.override('nox11')
+variants.override('nov4l2')
+variants.override('nogi')
+
+if platform == Platform.DARWIN:
+    recipes_commits['gtk+'] = 'ec81b82bd597bd177f89ff81d9c3f730f43a13a0'
+else:
+    recipes_commits['gtk+'] = '9320eaefb4fcb6d54b09ff98b11325edec2ac9fd'

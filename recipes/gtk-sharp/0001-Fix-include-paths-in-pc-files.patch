@@ -1,0 +1,49 @@
+From 6769b32eb66828b3fca392d282c15070891afce3 Mon Sep 17 00:00:00 2001
+From: Andoni Morales Alastruey <ylatuya@gmail.com>
+Date: Thu, 1 Aug 2019 17:50:01 +0200
+Subject: [PATCH] Fix include paths in pc files
+
+---
+ glade/glade-sharp-2.0.pc.in | 2 +-
+ glib/glib-sharp-2.0.pc.in   | 2 +-
+ gtk/gtk-sharp-2.0.pc.in     | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/glade/glade-sharp-2.0.pc.in b/glade/glade-sharp-2.0.pc.in
+index 9c4bb5f..5f56bdc 100644
+--- a/glade/glade-sharp-2.0.pc.in
++++ b/glade/glade-sharp-2.0.pc.in
+@@ -8,5 +8,5 @@ Name: Glade#
+ Description: Glade# - Glade .NET Binding
+ Version: @VERSION@
+ Requires: gtk-sharp-2.0
+-Cflags: -I:${gapidir}/glade-api.xml
++Cflags: -I${gapidir}/glade-api.xml
+ Libs: -r:${libdir}/mono/@PACKAGE_VERSION@/glade-sharp.dll
+diff --git a/glib/glib-sharp-2.0.pc.in b/glib/glib-sharp-2.0.pc.in
+index f54b724..c663d80 100644
+--- a/glib/glib-sharp-2.0.pc.in
++++ b/glib/glib-sharp-2.0.pc.in
+@@ -7,6 +7,6 @@ gapidir=${prefix}/share/gapi-2.0
+ Name: GLib#
+ Description: GLib# - .NET Binding for the glib library.
+ Version: @VERSION@
+-Cflags: -I:${gapidir}/glib-api.xml
++Cflags: -I${gapidir}/glib-api.xml
+ Libs: -r:${libdir}/mono/@PACKAGE_VERSION@/glib-sharp.dll
+ 
+diff --git a/gtk/gtk-sharp-2.0.pc.in b/gtk/gtk-sharp-2.0.pc.in
+index c044705..bf63053 100644
+--- a/gtk/gtk-sharp-2.0.pc.in
++++ b/gtk/gtk-sharp-2.0.pc.in
+@@ -7,6 +7,6 @@ gapidir=${prefix}/share/gapi-2.0
+ Name: Gtk#
+ Description: Gtk# - GNOME .NET Binding
+ Version: @VERSION@
+-Cflags: -I:${gapidir}/pango-api.xml -I:${gapidir}/atk-api.xml -I:${gapidir}/gdk-api.xml -I:${gapidir}/gtk-api.xml
++Cflags: -I${gapidir}/pango-api.xml -I${gapidir}/atk-api.xml -I${gapidir}/gdk-api.xml -I${gapidir}/gtk-api.xml
+ Libs: -r:${libdir}/mono/@PACKAGE_VERSION@/pango-sharp.dll -r:${libdir}/mono/@PACKAGE_VERSION@/atk-sharp.dll -r:${libdir}/mono/@PACKAGE_VERSION@/gdk-sharp.dll -r:${libdir}/mono/@PACKAGE_VERSION@/gtk-sharp.dll
+ Requires: glib-sharp-2.0
+-- 
+2.14.1
+

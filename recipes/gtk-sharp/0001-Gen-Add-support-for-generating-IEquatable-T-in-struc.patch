@@ -1,0 +1,102 @@
+From b2716af6901a36362b9d69787ec1af03d39ae83b Mon Sep 17 00:00:00 2001
+From: Andoni Morales Alastruey <ylatuya@gmail.com>
+Date: Fri, 2 Aug 2019 18:35:00 +0200
+Subject: [PATCH] [Gen] Add support for generating IEquatable<T> in struct
+ definition
+
+This allows for injecting IEquatable<T> in the struct.
+As we have no way to know what the equals method should look like,
+we leave the implementation up to manual code.
+Also implement IEquatable<T> for TreeIter.
+---
+ generator/StructBase.cs |  9 ++++++++-
+ gtk/Gtk.metadata        |  1 +
+ gtk/TreeIter.custom     | 33 +++++++++++++++++----------------
+ 3 files changed, 26 insertions(+), 17 deletions(-)
+
+diff --git a/generator/StructBase.cs b/generator/StructBase.cs
+index 5abe24e..a7b8956 100644
+--- a/generator/StructBase.cs
++++ b/generator/StructBase.cs
+@@ -149,6 +149,13 @@ namespace GtkSharp.Generation {
+ 			return base.Validate ();
+ 		}
+ 
++		string GetInterfaceImplExtra ()
++		{
++			if (Elem.HasAttribute ("iequatable") && Elem.GetAttribute ("iequatable") == "1")
++				return " : IEquatable<" + Name + ">";
++			return string.Empty;
++		}
++
+ 		public override void Generate (GenerationInfo gen_info)
+ 		{
+ 			bool need_close = false;
+@@ -172,7 +179,7 @@ namespace GtkSharp.Generation {
+ 			sw.WriteLine ("\t[StructLayout(LayoutKind.Sequential)]");
+ 			GenerateAttribute (sw);
+ 			string access = IsInternal ? "internal" : "public";
+-			sw.WriteLine ("\t" + access + " struct " + Name + " {");
++			sw.WriteLine ("\t" + access + " struct " + Name + GetInterfaceImplExtra () + " {");
+ 			sw.WriteLine ();
+ 
+ 			GenFields (gen_info);
+diff --git a/gtk/Gtk.metadata b/gtk/Gtk.metadata
+index 7bd8083..64cc50a 100644
+--- a/gtk/Gtk.metadata
++++ b/gtk/Gtk.metadata
+@@ -950,4 +950,5 @@
+   <attr path="/api/namespace/boxed[@cname='GtkSelectionData']/method[@cname='gtk_selection_data_set_uris']" name="name">SetSelectedUris</attr>
+   <attr path="/api/namespace/boxed[@cname='GtkRecentInfo']/method[@cname='gtk_recent_info_get_applications']" name="name">GetRecentApplications</attr>
+   <attr path="/api/namespace/boxed[@cname='GtkRecentInfo']/method[@cname='gtk_recent_info_get_groups']" name="name">GetRecentGroups</attr>
++  <attr path="/api/namespace/boxed[@cname='GtkTreeIter']" name="iequatable">1</attr>
+ </metadata>
+diff --git a/gtk/TreeIter.custom b/gtk/TreeIter.custom
+index 2ddfabe..e768061 100644
+--- a/gtk/TreeIter.custom
++++ b/gtk/TreeIter.custom
+@@ -16,24 +16,25 @@
+ // Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ // Boston, MA 02111-1307, USA.
+ 
+-                public override int GetHashCode ()
+-                {
+-			return Stamp ^ (int) _user_data ^ (int) _user_data2 ^ (int) _user_data3;
+-                }
++		public override int GetHashCode ()
++		{
++			return Stamp ^ (int)_user_data ^ (int)_user_data2 ^ (int)_user_data3;
++		}
+ 
+-                public override bool Equals (object o)
+-                {
+-                        if (o == null)
+-                                return false;
++		public override bool Equals (object o)
++		{
++			if (!(o is TreeIter))
++				return false;
++			return Equals ((TreeIter)o);
++		}
+ 
+-                        if (!(o is TreeIter))
+-                                return false;
+-                        TreeIter ti = (TreeIter) o;
+-                        return ti.Stamp == Stamp &&
+-                                ti._user_data == _user_data &&
+-                                ti._user_data2 == _user_data2 &&
+-                                ti._user_data3 == _user_data3;
+-                }
++		public bool Equals (TreeIter ti)
++		{
++			return ti.Stamp == Stamp &&
++					ti._user_data == _user_data &&
++					ti._user_data2 == _user_data2 &&
++					ti._user_data3 == _user_data3;
++		}
+ 
+ 		public IntPtr UserData {
+ 			get {
+-- 
+2.14.1
+

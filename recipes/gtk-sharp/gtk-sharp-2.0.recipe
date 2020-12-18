@@ -1,0 +1,81 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+import shutil
+import os
+
+class Recipe(recipe.Recipe):
+    name = 'gtk-sharp'
+    version = '2.12.43'
+    licenses = [License.LGPLv2Plus]
+    stype = SourceType.TARBALL
+    deps = ['gtk+']
+    url = 'https://github.com/mono/gtk-sharp/archive/%(version)s.tar.gz'
+    tarball_checksum = '9edef3e867ec7f4b234d49429971e66d4dde6e4e88254ef7d221c0dd0c9ad3ea'
+    patches = ['0002-fix_pixbuf_memory_leak.patch',
+               '0001-Fix-mono-detection-in-macos.patch',
+               '0001-Fix-include-paths-in-pc-files.patch',
+               '0001-Gen-Add-support-for-generating-IEquatable-T-in-struc.patch']
+    config_sh = 'sh bootstrap-2.12'
+
+    files_gapi = [
+        'lib/gtk-sharp-2.0/gapi_codegen.exe',
+        'lib/gtk-sharp-2.0/gapi-parser.exe',
+        'lib/gtk-sharp-2.0/gapi-fixup.exe'
+    ]
+
+    # When cross compiling on Windows the glue files
+    # are not installed on bin (not the %(sdir) var)
+    files_glue = [
+        'lib/libatksharpglue-2%(mext)s',
+        'lib/libgdksharpglue-2%(mext)s',
+        'lib/libglibsharpglue-2%(mext)s',
+        'lib/libgtksharpglue-2%(mext)s',
+        'lib/libpangosharpglue-2%(mext)s',
+    ]
+
+    files_mono = [
+        'lib/mono/4.5/Mono.Posix.dll',
+        'lib/mono/gtk-sharp-2.0/Mono.Cairo.dll',
+        'lib/mono/gtk-sharp-2.0/atk-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/gtk-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/gdk-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/pango-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/glib-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/atk-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/gtk-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/gdk-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/pango-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/glib-sharp.dll.config'
+       ]
+
+    files_devel = [
+        'lib/pkgconfig/glib-sharp-2.0.pc',
+        'lib/pkgconfig/gtk-sharp-2.0.pc',
+        'lib/pkgconfig/gapi-2.0.pc',
+    ]
+
+    async def configure(self):
+        await super(Recipe, self).configure()
+        shell.replace(os.path.join(self.build_dir, 'Makefile.am'),
+                      {' sample doc msi': ''})
+
+    def prepare(self):
+        if self.config.target_platform == self.config.platform and self.config.target_platform == Platform.WINDOWS:
+            raise InvalidRecipeError()
+
+    def post_install(self):
+        gtk_sharp_dir = os.path.join(self.config.prefix, 'lib', 'mono')
+
+        if not os.path.exists(gtk_sharp_dir):
+            os.makedirs(gtk_sharp_dir)
+        if not os.path.exists(os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0')):
+            os.makedirs(os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0'))
+        if not os.path.exists(os.path.join(gtk_sharp_dir, '4.5')):
+            os.makedirs(os.path.join(gtk_sharp_dir, '4.5'))
+
+        shutil.copy("/Library/Frameworks//Mono.framework/Versions/6.12.0/lib/mono/4.5/Mono.Cairo.dll",
+                os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0'))
+        shutil.copy("/Library/Frameworks//Mono.framework/Versions/6.12.0/lib/mono/4.5/Mono.Posix.dll",
+                os.path.join(gtk_sharp_dir, '4.5'))
+        for x in ['atk', 'gtk', 'gdk', 'pango', 'glib']:
+            shutil.copy(os.path.join(self.build_dir, x, "%s-sharp.dll.config" % x),
+                        os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0'))

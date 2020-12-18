@@ -1,0 +1,20 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+from utils import import_recipe
+
+cerbero_recipes_dir = os.path.join("..", "cerbero", "recipes")
+file = os.path.join(os.path.split(__file__)[0], cerbero_recipes_dir, "glib.recipe")
+glib_recipe = import_recipe(file)
+
+
+class Recipe(glib_recipe):
+
+    def prepare(self):
+        super().prepare()
+        self.patches = [os.path.join(cerbero_recipes_dir, x) for x in self.patches]
+
+    async def configure(self):
+        if self.config.target_platform == Platform.DARWIN:
+            # GTK+ fails to build with G_HAVE_GNUC_VISIBILITY defined
+            shell.replace(os.path.join(self.build_dir, 'glib/glibconfig.h.in'),
+                    {'#mesondefine G_HAVE_GNUC_VISIBILITY': '//#mesondefine G_HAVE_GNUC_VISIBILITY'})
+        await super().configure()

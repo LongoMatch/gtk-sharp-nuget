@@ -1,0 +1,152 @@
+# vi:si:et:sw=4:sts=4:ts=4:syntax=python
+# -*- Mode: Python -*-
+import shutil
+import tempfile
+import os
+import sys
+from cerbero.enums import License
+from cerbero.packages.packagesstore import PackagesStore
+from cerbero.packages.packager import _packagers
+from cerbero.tools.depstracker import DepsTracker
+from cerbero.utils import shell, messages as m
+from cerbero.tools import strip
+from cerbero.tools.osxrelocator import OSXRelocator
+
+FILE_TPL = '    <file target="runtime/{platform}/native/{rel_path}" src="{file}" />\n'
+
+ASSEMBLY_FILE_TPL = '    <file target="lib/net45/{rel_path}" src="{file}" />\n'
+
+
+class GtkPackage(package.Package):
+    name = 'fluendo-gtk'
+    shortdesc = 'Gtk .Net bindings and native dependencies'
+    longdesc = 'Gtk+ .Net bindings and native dependencies'
+    url = "http://www.fluendo.com"
+    version = '2.24.30.42'
+    license = License.LGPLv2Plus
+    vendor = 'Fluendo'
+    org = 'com.fluendo'
+    debian_disable_dh_shlibdebs = True
+    strip = False
+    strip_excludes = []
+    strip_dirs = ['bin', 'lib']
+    install_dir = {
+        Platform.LINUX: '/usr'
+    }
+    files = ['gtk-sharp:glue:mono', 'gtk+:libs:modules:themes:lang', 'librsvg:libs:loader', 'fontconfig:libs:etc', 'gtk-engines:themes']
+    platform_files = {Platform.DARWIN: ['gtk-mac-integration:libs']}
+    files_devel = ['glib']
+    _recipe = None
+
+    def prepare(self):
+        if self.config.target_platform == Platform.WINDOWS:
+            self.strip_excludes.append('libopenh264')
+
+    def post_package(self, paths, output_dir):
+        return self._create_nuget_package(paths, output_dir)
+
+    def _list_libraries_dependencies(self):
+        deps_tracker = DepsTracker(self.config.target_platform,
+                                   self.config.prefix)
+        files = []
+        for recipe in ['proxy-libintl', 'gtk+', 'librsvg', 'fontconfig']:
+            libs = self.cookbook.get_recipe(recipe).libraries()
+            libs = [v[0] for x,v in libs.items()]
+            files += deps_tracker.list_deps(os.path.join(self.config.prefix, libs[0]))
+        files = [x.replace(self.config.prefix + '/', '') for x in set(files)]
+        return list(set(files))
+
+    def _create_nuget_package(self, paths, output_dir):
+        platform = None
+        if self.config.target_platform == Platform.WINDOWS:
+            if self.config.target_arch == Architecture.X86:
+                platform = 'win7-x86'
+            elif self.config.target_arch == Architecture.X86_64:
+                platform = 'win7-x86_64'
+        if self.config.target_platform == Platform.LINUX:
+            m.message("Skipping NuGet package for this paltform and architecture")
+            return paths
+        if self.config.target_platform == Platform.DARWIN:
+            platform = 'osx'
+        if not platform:
+            m.message("Skipping NuGet package for this paltform and architecture")
+            return paths
+
+        libraries = self._list_libraries_dependencies()
+        files_to_include = libraries[:]
+        files_to_include += self.files_list()
+
+        # Copy files to include in the NuGet package
+        tmpdir = tempfile.mkdtemp()
+        runtime = os.path.join(tmpdir, 'runtime')
+        os.makedirs(runtime)
+        for f in files_to_include:
+            src = os.path.join(self.config.prefix, f)
+            dst = os.path.join(runtime, f)
+            if not os.path.exists(os.path.dirname(dst)):
+                os.makedirs(os.path.dirname(dst))
+            shutil.copy(src, dst)
+            if self.config.target_platform == Platform.DARWIN:
+                for lib in OSXRelocator.list_shared_libraries(dst):
+                    if not lib.startswith("@rpath"):
+                        continue
+                    new_lib = lib.replace("@rpath/lib", "@rpath")
+                    cmd = 'install_name_tool -change {} {} {}'.format(lib, new_lib, dst)
+                    shell.call(cmd, fail=False)
+        shutil.copy(self.relative_path('Fluendo.Gtk.native.targets'),
+                    os.path.join(tmpdir, 'Fluendo.Gtk.{}.targets'.format(platform)))
+        if self.strip:
+            s = strip.Strip(self.config, self.strip_excludes)
+            for p in self.strip_dirs:
+                s.strip_dir(os.path.join(runtime, p))
+
+        # Create nuget with native dependencies
+        native_nuget_files = ""
+        for f in files_to_include:
+            fil = f.split('/')
+            # Copy libraries and binaires in the root so they are found by the assembly
+            if len(fil) == 2 and fil[0] in ['lib', 'bin']:
+                out_f = fil[1]
+            # Skip Gtk-sharp assemblies in the root
+            elif len(fil) > 2 and fil[1] == 'mono':
+                continue
+            else:
+                out_f = f
+            native_nuget_files += FILE_TPL.format(platform=platform, rel_path=out_f,
+                                           file=os.path.join("runtime", f))
+        nuspec_path = os.path.join(tmpdir, 'Fluendo.GTK.{}.nuspec'.format(platform))
+        with open(self.relative_path('fluendo-gtk-native.nuspec.tpl'), 'r') as f:
+            nuspec_tpl = f.read()
+            nuspec = nuspec_tpl.format(platform=platform, version=self.version,
+                                       files=native_nuget_files, targets=self.relative_path('fluendo-gtk-native.targets'))
+        with open(nuspec_path, '+w') as outfile:
+            outfile.write(nuspec)
+        shell.call("nuget pack -verbosity detailed {}".format(nuspec_path), tmpdir)
+        nuget_native = 'Fluendo.GTK.{}.{}.nupkg'.format(platform, self.version)
+        shutil.move(os.path.join(tmpdir, nuget_native), os.path.join(output_dir, nuget_native))
+
+        # Create nuget with assemblies
+        # It seems that the assemblies nugget created from Windows does not work with macOS but not vice versa
+        if self.config.platform == Platform.DARWIN:
+            nuget_files = ""
+            for f in files_to_include:
+                fil = f.split('/')
+                # Copy Gtk-sharp assemblies in the root
+                if len(fil) > 2 and fil[1] == 'mono':
+                    out_f = fil[-1]
+                    nuget_files += ASSEMBLY_FILE_TPL.format(platform=platform, rel_path=out_f,
+                                                            file=os.path.join("runtime", f))
+            nuspec_path = os.path.join(tmpdir, 'Fluendo.GTK.nuspec')
+            with open(self.relative_path('fluendo-gtk.nuspec.tpl'), 'r') as f:
+                nuspec_tpl = f.read()
+                nuspec = nuspec_tpl.format(platform=platform, version=self.version, files=nuget_files)
+            with open(nuspec_path, '+w') as outfile:
+                outfile.write(nuspec)
+            shell.call("nuget pack -verbosity detailed {}".format(nuspec_path), tmpdir)
+            nuget = 'Fluendo.GTK.{}.nupkg'.format(self.version)
+            shutil.move(os.path.join(tmpdir, nuget), os.path.join(output_dir, nuget))
+            paths.append(os.path.join(output_dir, nuget))
+
+        shutil.rmtree(tmpdir)
+        paths.append(os.path.join(output_dir, nuget_native))
+        return paths

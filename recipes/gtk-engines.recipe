@@ -1,0 +1,21 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+import shutil
+from cerbero.build.build import modify_environment
+
+# NOTE: We only use clearlooks theme for LongoMatch, so we copy only that library to the prefix.
+class Recipe(recipe.Recipe):
+    name = 'gtk-engines'
+    version = '2.20.2'
+    licenses = [License.LGPLv2Plus]
+    deps = ['gtk+']
+    stype = SourceType.TARBALL
+    url = 'https://download.gnome.org/sources/gtk-engines/2.20/gtk-engines-2.20.2.tar.gz'
+    tarball_checksum = 'aa65209c824a71feb82c31a6c5bdee22658874cff4fca610d174d983c807c22f'
+
+    files_themes = [
+        'lib/gtk-2.0/2.10.0/engines/libclearlooks%(mext)s'
+    ]
+
+    @modify_environment
+    async def configure(self):
+        shell.call('./configure --prefix=$CERBERO_PREFIX', self.build_dir, logfile=self.logfile, env=self.env)

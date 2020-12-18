@@ -1,0 +1,24 @@
+From a0a03a6161d80ebee240265836781a6082bf66ad Mon Sep 17 00:00:00 2001
+From: Andoni Morales Alastruey <ylatuya@gmail.com>
+Date: Fri, 2 Aug 2019 18:02:09 +0200
+Subject: [PATCH] Remove use of old api
+
+---
+ src/test-integration.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/test-integration.c b/src/test-integration.c
+index 8b94d17..7282196 100644
+--- a/src/test-integration.c
++++ b/src/test-integration.c
+@@ -706,7 +706,6 @@ main (int argc, char **argv)
+ #ifdef GTKOSXAPPLICATION
+   GtkOSXApplication *theApp;
+ #endif //GTKOSXAPPLICATION
+-    g_thread_init(NULL);
+     gdk_threads_init();
+   gtk_init (&argc, &argv);
+ #ifdef GTKMACINTEGRATION
+-- 
+2.14.1
+

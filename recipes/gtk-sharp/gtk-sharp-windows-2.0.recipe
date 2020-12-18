@@ -1,0 +1,84 @@
+
+import shutil
+import os
+from cerbero.utils import shell
+
+class Recipe(recipe.Recipe):
+    name = 'gtk-sharp'
+    version = '2.12.43'
+    licenses = [License.LGPLv2Plus]
+    stype = SourceType.TARBALL
+    deps = ['gtk+', 'mono-windows']
+    url = 'https://github.com/mono/gtk-sharp/archive/%(version)s.tar.gz'
+    tarball_checksum = '9edef3e867ec7f4b234d49429971e66d4dde6e4e88254ef7d221c0dd0c9ad3ea'
+    patches = ['0002-fix_pixbuf_memory_leak.patch',
+               '0001-Fix-mono-detection-in-macos.patch',
+               '0001-Fix-include-paths-in-pc-files.patch',
+               '0001-Gen-Add-support-for-generating-IEquatable-T-in-struc.patch']
+    config_sh = 'sh bootstrap-2.12'
+
+    files_gapi = [
+        'lib/gtk-sharp-2.0/gapi_codegen.exe',
+        'lib/gtk-sharp-2.0/gapi-parser.exe',
+        'lib/gtk-sharp-2.0/gapi-fixup.exe'
+    ]
+
+    files_glue = [
+        'lib/atksharpglue-2.dll',
+        'lib/gdksharpglue-2.dll',
+        'lib/glibsharpglue-2.dll',
+        'lib/gtksharpglue-2.dll',
+        'lib/pangosharpglue-2.dll',
+    ]
+
+    files_mono = [
+        'lib/mono/4.5/Mono.Posix.dll',
+        'lib/mono/gtk-sharp-2.0/atk-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/gtk-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/gdk-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/pango-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/glib-sharp.dll',
+        'lib/mono/gtk-sharp-2.0/atk-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/gtk-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/gdk-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/pango-sharp.dll.config',
+        'lib/mono/gtk-sharp-2.0/glib-sharp.dll.config'
+    ]
+
+    files_devel = [
+        'lib/pkgconfig/glib-sharp-2.0.pc',
+        'lib/pkgconfig/gtk-sharp-2.0.pc',
+        'lib/pkgconfig/gapi-2.0.pc',
+    ]
+
+    def prepare(self):
+        if self.config.target_platform != self.config.platform or self.config.target_platform != Platform.WINDOWS:
+            raise InvalidRecipeError(self)
+
+    async def configure(self):
+        await super(Recipe, self).configure()
+        shell.replace(os.path.join(self.build_dir, 'Makefile.am'),
+                      {' sample doc msi': ''})
+        shell.replace(os.path.join(self.build_dir, 'cairo', 'Makefile.am'),
+                      {' /i ': ' -i ', ' /f ': ' -f '})
+
+    def post_install(self):
+        gtk_sharp_dir = os.path.join(self.config.prefix, 'lib', 'mono')
+
+        if not os.path.exists(gtk_sharp_dir):
+            os.makedirs(gtk_sharp_dir)
+        if not os.path.exists(os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0')):
+            os.makedirs(os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0'))
+        if not os.path.exists(os.path.join(gtk_sharp_dir, '4.5')):
+            os.makedirs(os.path.join(gtk_sharp_dir, '4.5'))
+
+        for x in ['atk', 'gtk', 'gdk', 'pango', 'glib']:
+            shutil.move(os.path.join(self.config.prefix, 'lib', "lib%ssharpglue-2.dll" % x),
+                        os.path.join(self.config.prefix, 'lib', "%ssharpglue-2.dll" % x))
+            shutil.copy(os.path.join(self.build_dir, x, "%s-sharp.dll.config" % x),
+                        os.path.join(gtk_sharp_dir, 'gtk-sharp-2.0'))
+
+        pf = os.environ.get('PROGRAMFILES(X86)', os.environ['PROGRAMFILES'])
+        mono_installation = os.path.join(pf, 'Mono', 'lib', 'mono', '4.5')
+        shutil.copy(os.path.join(mono_installation, 'Mono.Posix.dll',
+                    os.path.join(gtk_sharp_dir, '4.5')))

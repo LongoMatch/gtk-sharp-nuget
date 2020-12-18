@@ -1,0 +1,14 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+from utils import import_recipe
+
+cerbero_recipes_dir = os.path.join("..", "cerbero", "recipes")
+file = os.path.join(os.path.split(__file__)[0], cerbero_recipes_dir, "cairo.recipe")
+cairo_recipe = import_recipe(file)
+
+
+class Recipe(cairo_recipe):
+
+    def prepare(self):
+        super().prepare()
+        self.patches = [os.path.join(cerbero_recipes_dir, x) for x in self.patches]
+        self.patches.append('cairo/0003-Fix-Cairo-on-BigSur.patch')

@@ -1,0 +1,14 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+
+class Recipe(recipe.Recipe):
+    name = 'gtk-mac-integration'
+    version = '1.0.1'
+    stype = SourceType.TARBALL
+    url = 'https://ftp.gnome.org/pub/GNOME/sources/gtk-mac-integration/1.0/gtk-mac-integration-1.0.1.tar.xz'
+    tarball_checksum = '2ce658f1e076015cb041be0576ce886c89f8b71d69f127c97f98402f50d04a37'
+    patches = ['gtk-mac-integration/0001-Remove-use-of-old-api.patch']
+    override_libtool = False
+    deps = ['gtk+']
+
+    files_libs = ['libgtkmacintegration']
+    files_devel = ['include/gtkmacintegration', 'lib/pkgconfig/gtk-mac-integration.pc']

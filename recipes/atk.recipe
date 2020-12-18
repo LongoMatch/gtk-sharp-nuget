@@ -1,0 +1,27 @@
+# -*- Mode: Python -*- vi:si:et:sw=4:sts=4:ts=4:syntax=python
+
+
+class Recipe(recipe.Recipe):
+    name = 'atk'
+    version = '2.16.0'
+    licenses = [License.LGPLv2Plus]
+    deps = ['glib']
+
+    stype = SourceType.TARBALL
+    url = 'https://ftp.acc.umu.se/pub/GNOME/sources/atk/2.16/atk-%(version)s.tar.xz'
+    tarball_checksum = '095f986060a6a0b22eb15eef84ae9f14a1cf8082488faa6886d94c37438ae562'
+    override_libtool = False
+
+    files_libs = ['libatk-1.0']
+    files_devel = ['lib/pkgconfig/atk.pc', 'include/atk-1.0']
+    files_lang = ['atk10']
+
+    def prepare(self):
+        if self.config.target_platform != Platform.LINUX:
+            self.configure_options = ' --disable-gtk-doc'
+
+    async def configure(self):
+        shell.replace(os.path.join(self.build_dir, 'atk', 'Makefile.in'),
+            {'--fprod "/* enumerations from \\"@filename@\\" */\\n" \\':
+             '--fprod "\\n/* enumerations from \\"@filename@\\" */" \\'})
+        await super(recipe.Recipe, self).configure()
