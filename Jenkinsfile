@@ -18,17 +18,21 @@ pipeline {
                             system: "macOS",
                             root: "../..",
                             packagedir: "/package/",
-                            packageextension: "pkg",
+                            nugetextension: "nupkg",
                             buildcommand: "make",
-                            postarguments: ""
+                            postarguments: "",
+                            nugetname: "Fluendo.GTK",
+                            nugetnameOS: "Fluendo.GTK.osx"
                         ],
                         [
                             jenkins_node: "minimac-longomatch-windows",
                             system: "Windows",
                             root: "../../..",
                             packagedir: "/package/",
-                            packageextension: "exe",
+                            nugetextension: "nupkg",
                             buildcommand: "",
+                            nugetname: "Fluendo.GTK",
+                            nugetnameOS: "Fluendo.GTK.win"
                         ]
                     ]
 
@@ -38,20 +42,47 @@ pipeline {
                         String buildarch = arch.system.trim()
                         String strnode = arch.jenkins_node.trim()
                         String strroot = arch.root.trim()
-                        String pkgext = arch.packageextension.trim()
+                        String pkgext = arch.nugetextension.trim()
+                        String pkgname = arch.nugetname.trim()
+                        String pkgnameOS = arch.nugetnameOS.trim()
 
                         builds["${buildarch}"] = {
                             node (strnode) {
                                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: "Fails in ${buildarch} pipeline") {
                                     stage("Build ${buildarch}") {
+                                        
+                                        def preargs = ""
                                         checkout scm
-                                        sh script: "git init && git submodule update", label: "Update submodule"
-                                        sh script: "./cerbero-gtk-sharp-nuget bootstrap", label: "Bootstrap"
-                                        sh script: "./cerbero-gtk-sharp-nuget package fluendo-gtk", label: "Package"
+
+                                        sh script: "git submodule init && git submodule sync && git submodule update", label: "Update submodule"
+
+                                        switch(buildarch) {
+                                            case "macOS":
+                                                sh script: "make build", label: "Mac Build"
+                                                break
+                                            case "Windows":
+                                                sh script: "python cerbero-gtk-sharp-nuget bootstrap -y", label: "Bootstrap"
+                                                sh script: "python cerbero-gtk-sharp-nuget package fluendo-gtk", label: "Package"
+                                                break
+                                            default:
+                                                break
+                                        }
+                                    }
+
+                                    stage("Upload ${buildarch} package") {
+                                        
+                                        def filedestin = "${env.WORKSPACE}/filelist.txt"
+
+                                        //uploadNuget(pkgdir, pkgname, pkgnameOS, pkgext, packageVersion)
+                                        // deploy of package to officestorage and nuget server
+                                        //-----------------------------------------------------
+                                        deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext)
+                                        //-----------------------------------------------------
+
                                     }
 
                                 }
-                                cleanWorkspace()
+                                //cleanWorkspace()
                             }
                         }
                     }
@@ -77,20 +108,16 @@ pipeline {
         failure {
             script {
                 echo "failure"
-                if (uploadPackage) {
-                    slackSend botUser: true, channel: '#buildbot-vas', color: 'danger',
-                    message: "Failure: job ${env.JOB_NAME} \n More info at: ${env.BUILD_URL}",
-                    baseUrl: 'https://fluendo.slack.com/services/hooks/jenkins-ci/',
-                    teamDomain: 'fluendo',
-                    tokenCredentialId: 'ad868fe8-119c-4083-9bb4-2e4f668ce4fe'
-                }
+                slackSend botUser: true, channel: '#buildbot-vas', color: 'danger',
+                message: "Failure: job ${env.JOB_NAME} \n More info at: ${env.BUILD_URL}",
+                baseUrl: 'https://fluendo.slack.com/services/hooks/jenkins-ci/',
+                teamDomain: 'fluendo',
+                tokenCredentialId: 'ad868fe8-119c-4083-9bb4-2e4f668ce4fe'
             }
         }
         always {
             script {
-                if (!uploadPackage) {
                     jiraSendBuildInfo branch: env.BRANCH_NAME, site: 'fluendo.atlassian.net'
-                }
             }
         }
         aborted {
@@ -101,25 +128,58 @@ pipeline {
     }
 }
 
-def getPackageVersion()
+def deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext)
 {
-    return sh(script: "src/build/git-version-gen src/Version.txt", returnStdout: true, label: "Get version").trim()
-}
+    def nugetpackageversion = ""
+    def majordp
+    def minordp
+    def revisiondp
+    def builddp
+    def matchversion_up = false
+    def command_up = "ls *.nupkg > ${filedestin}"
+    // looking for the number of version generated via regex
+    sh command_up
+    def result_up = readFile(filedestin).trim()
+    def version_up = result_up.split("\n")[0]
 
-def uploadPackages(packagedir, filename, fileextension)
-{
-    currentlocation = sh(script: "pwd", returnStdout: true).trim()
-    majordp = packageVersion.split("\\.")[0]
-    minordp = packageVersion.split("\\.")[1]
-    revisiondp = packageVersion.split("\\.")[2]
-    ftpfolder = URL_DEVEL_FTP
+    def parser_up = /^.*?(?<majordp>\d+)\.(?<minordp>\d+)\.(?<revisiondp>\d+)\.(?<builddp>\d+).*$/
+    def match_up = (version_up =~ parser_up)
 
-    if (env.BRANCH_NAME == 'longomatch-release') {
-        ftpfolder = URL_RELEASE_FTP
-        sh script:"curl -T ${currentlocation}${packagedir}/${filename}.${fileextension}.dsa ${URL_BASE_FTP}/${ftpfolder}/${majordp}.${minordp}.${revisiondp}/ --ftp-create-dirs --user ${FLU_USERNAME}:\"${FTP_PRE} ${FTP_SUF}\"", label: "Upload"
+    if (match_up.matches()) {
+        (majordp, minordp, revisiondp, builddp) = ['majordp', 'minordp', 'revisiondp', 'builddp'].collect { match_up.group(it) }
+        match_up = null
+        matchversion_up=true
     }
 
-    sh script: "curl -T ${currentlocation}${packagedir}/${filename}.${fileextension} ${URL_BASE_FTP}/${ftpfolder}/${majordp}.${minordp}.${revisiondp}/ --ftp-create-dirs --user ${FLU_USERNAME}:\"${FTP_PRE} ${FTP_SUF}\"", label: "Upload"
+    echo "Version == " + majordp + "." + minordp + "." + revisiondp + "." + builddp
+    match_up = null
+
+    if (matchversion_up) {
+        
+            echo "UPLOAD NUGET TO REPOSITORY"
+            nugetpackageversion = "${majordp}.${minordp}.${revisiondp}.${builddp}"
+    
+            // delete the packages with the same version and reupload the new ones instead
+            //--------------------------------------------------
+            deletenuget(pkgname, pkgnameOS, nugetpackageversion)
+            //--------------------------------------------------
+            // push nuget
+            sh " nuget push -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} ${pkgname}.${nugetpackageversion}.${pkgext}"
+            sh " nuget push -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} ${pkgnameOS}.${nugetpackageversion}.${pkgext}"
+
+       
+    }
+}
+
+def deletenuget(nugetpackage, nugetpackageOS,nugetpackageversion)
+{
+    try {
+        echo "Removing old Nuget packages with version {${nugetpackageversion}}"
+        sh "nuget delete ${nugetpackage} ${nugetpackageversion} -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} -NonInteractive"
+        sh "nuget delete ${nugetpackageOS} ${nugetpackageversion} -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} -NonInteractive"
+    } catch (Exception e) {
+        e.message
+    }
 }
 
 def cleanWorkspace()
