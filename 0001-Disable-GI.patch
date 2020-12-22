@@ -1,0 +1,25 @@
+From 21729f3bd652a4011fcc125af1dfa4e2b413d44c Mon Sep 17 00:00:00 2001
+From: fluendo <fluendo@osx-macmini-builder.fluendo.lan>
+Date: Tue, 22 Dec 2020 18:38:50 +0100
+Subject: [PATCH] Disable GI
+
+---
+ config/darwin.config | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/config/darwin.config b/config/darwin.config
+index 6e8210bf..bebdb5f4 100644
+--- a/config/darwin.config
++++ b/config/darwin.config
+@@ -13,7 +13,7 @@ from cerbero.errors import FatalError
+ allow_system_libs=False
+ 
+ # Enable introspection by default
+-variants.override('gi')
++#variants.override('gi')
+ 
+ if arch == Architecture.X86_64:
+     build = 'x86_64-apple-darwin12'
+-- 
+2.24.3 (Apple Git-128)
+
