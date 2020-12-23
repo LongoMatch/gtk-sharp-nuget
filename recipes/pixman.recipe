@@ -20,6 +20,8 @@ class Recipe(recipe.Recipe):
     files_devel = ['include/pixman-1', 'lib/pkgconfig/pixman-1.pc']
 
     def prepare(self):
+        if self.config.platform != Platform.DARWIN:
+            raise InvalidRecipeError(self, "This recipe is only needed for macOS")
         # clang from xcode has a known bug, avoid codepath that trigger it
         # More info : https://github.com/Homebrew/homebrew/issues/41056
         if self.config.target_platform in [ Platform.DARWIN, Platform.IOS ] and \

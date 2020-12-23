@@ -17,6 +17,8 @@ class Recipe(recipe.Recipe):
     files_devel = ['include/harfbuzz/*.h', 'lib/pkgconfig/harfbuzz.pc']
 
     def prepare(self):
+        if self.config.platform != Platform.DARWIN:
+            raise InvalidRecipeError(self, "This recipe is only needed for macOS")
         if self.config.platform != Platform.WINDOWS:
             self.patches = ['harfbuzz/0001-Use-Python3-in-gen-def.py.patch']
 
