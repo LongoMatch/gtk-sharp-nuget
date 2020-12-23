@@ -1,2 +1,3 @@
 *.nupkg
 *.pkg
+utils/__pycache__/
