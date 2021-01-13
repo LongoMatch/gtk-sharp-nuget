@@ -60,7 +60,7 @@ class Recipe(recipe.Recipe):
 
     def prepare(self):
         if self.config.target_platform == self.config.platform and self.config.target_platform == Platform.WINDOWS:
-            raise InvalidRecipeError()
+            raise InvalidRecipeError(self, "Recipe only valid in macOS")
 
     def post_install(self):
         gtk_sharp_dir = os.path.join(self.config.prefix, 'lib', 'mono')
