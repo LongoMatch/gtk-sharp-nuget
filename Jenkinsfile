@@ -32,7 +32,7 @@ pipeline {
                             nugetextension: "nupkg",
                             buildcommand: "",
                             nugetname: "Fluendo.GTK",
-                            nugetnameOS: "Fluendo.GTK.win"
+                            nugetnameOS: "Fluendo.GTK.win7-x86_64"
                         ]
                     ]
 
@@ -73,16 +73,19 @@ pipeline {
                                         
                                         def filedestin = "${env.WORKSPACE}/filelist.txt"
 
-                                        //uploadNuget(pkgdir, pkgname, pkgnameOS, pkgext, packageVersion)
+                                        if (buildarch == "Windows"){
+                                            filedestin = sh(script:"pwd", returnStdout: true).trim() + "/filelist.txt"
+                                        }
+
                                         // deploy of package to officestorage and nuget server
                                         //-----------------------------------------------------
-                                        deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext)
+                                        deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext, buildarch)
                                         //-----------------------------------------------------
 
                                     }
 
                                 }
-                                //cleanWorkspace()
+                                cleanWorkspace()
                             }
                         }
                     }
@@ -128,7 +131,7 @@ pipeline {
     }
 }
 
-def deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext)
+def deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext, buildarch)
 {
     def nugetpackageversion = ""
     def majordp
@@ -137,12 +140,21 @@ def deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext)
     def builddp
     def matchversion_up = false
     def command_up = "ls *.nupkg > ${filedestin}"
+    
     // looking for the number of version generated via regex
     sh command_up
-    def result_up = readFile(filedestin).trim()
+    def result_up
+
+    if (buildarch == "Windows"){
+        result_up = readFile("filelist.txt").trim()
+    }else
+    {
+        result_up = readFile(filedestin).trim()
+    }
+    
     def version_up = result_up.split("\n")[0]
 
-    def parser_up = /^.*?(?<majordp>\d+)\.(?<minordp>\d+)\.(?<revisiondp>\d+)\.(?<builddp>\d+).*$/
+    def parser_up = /^.*.?(?<majordp>\d+)\.(?<minordp>\d+)\.(?<revisiondp>\d+)\.(?<builddp>\d+).*$/
     def match_up = (version_up =~ parser_up)
 
     if (match_up.matches()) {
@@ -156,26 +168,32 @@ def deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext)
 
     if (matchversion_up) {
         
-            echo "UPLOAD NUGET TO REPOSITORY"
-            nugetpackageversion = "${majordp}.${minordp}.${revisiondp}.${builddp}"
-    
-            // delete the packages with the same version and reupload the new ones instead
-            //--------------------------------------------------
-            deletenuget(pkgname, pkgnameOS, nugetpackageversion)
-            //--------------------------------------------------
-            // push nuget
-            sh " nuget push -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} ${pkgname}.${nugetpackageversion}.${pkgext}"
-            sh " nuget push -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} ${pkgnameOS}.${nugetpackageversion}.${pkgext}"
+        echo "UPLOAD NUGET TO REPOSITORY"
+        nugetpackageversion = "${majordp}.${minordp}.${revisiondp}.${builddp}"
 
+        // delete the packages with the same version and reupload the new ones instead
+        deletenuget(pkgname, pkgnameOS,nugetpackageversion, buildarch)
+        
+        // push nuget
+        if (buildarch == "macOS"){
+            sh " nuget push -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} ${pkgname}.${nugetpackageversion}.${pkgext}"
+        }
+        sh " nuget push -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} ${pkgnameOS}.${nugetpackageversion}.${pkgext}"
        
     }
 }
 
-def deletenuget(nugetpackage, nugetpackageOS,nugetpackageversion)
+def deletenuget(nugetpackage, nugetpackageOS, nugetpackageversion, buildarch)
 {
     try {
         echo "Removing old Nuget packages with version {${nugetpackageversion}}"
-        sh "nuget delete ${nugetpackage} ${nugetpackageversion} -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} -NonInteractive"
+        if (buildarch == "macOS"){
+            sh "nuget delete ${nugetpackage} ${nugetpackageversion} -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} -NonInteractive"
+        }
+    } catch (Exception e) {
+        e.message
+    }
+    try {
         sh "nuget delete ${nugetpackageOS} ${nugetpackageversion} -source ${NUGET_SERVER} -ApiKey ${NUGET_KEY} -NonInteractive"
     } catch (Exception e) {
         e.message
