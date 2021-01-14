@@ -1,3 +1,3 @@
 [submodule "cerbero"]
 	path = cerbero
-	url = https://gitlab.freedesktop.org/gstreamer/cerbero.git
+	url = https://gitlab.freedesktop.org/ylatuya/cerbero.git
