@@ -22,7 +22,7 @@ class GtkPackage(package.Package):
     shortdesc = 'Gtk .Net bindings and native dependencies'
     longdesc = 'Gtk+ .Net bindings and native dependencies'
     url = "http://www.fluendo.com"
-    version = '2.24.30.42'
+    version = '2.24.30.43'
     license = License.LGPLv2Plus
     vendor = 'Fluendo'
     org = 'com.fluendo'
