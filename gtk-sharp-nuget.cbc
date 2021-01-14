@@ -19,7 +19,7 @@ variants.override('nogi')
 
 if platform == Platform.DARWIN:
     home_dir = '/opt/gtk-sharp-nuget'
-    recipes_commits['gtk+'] = 'ec81b82bd597bd177f89ff81d9c3f730f43a13a0'
+    recipes_commits['gtk+'] = 'a774471887d326d741811ed03964108ee2e9e2fb'
 else:
     home_dir = 'Z:/gtk-sharp-nuget'
     recipes_commits['gtk+'] = '9320eaefb4fcb6d54b09ff98b11325edec2ac9fd'
