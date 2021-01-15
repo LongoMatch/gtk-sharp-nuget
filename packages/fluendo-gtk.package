@@ -27,7 +27,7 @@ class GtkPackage(package.Package):
     vendor = 'Fluendo'
     org = 'com.fluendo'
     debian_disable_dh_shlibdebs = True
-    strip = False
+    strip = True
     strip_excludes = []
     strip_dirs = ['bin', 'lib']
     install_dir = {
