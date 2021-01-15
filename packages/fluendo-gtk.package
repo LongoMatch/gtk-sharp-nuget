@@ -27,7 +27,7 @@ class GtkPackage(package.Package):
     vendor = 'Fluendo'
     org = 'com.fluendo'
     debian_disable_dh_shlibdebs = True
-    strip = False
+    strip = True
     strip_excludes = []
     strip_dirs = ['bin', 'lib']
     install_dir = {
@@ -46,6 +46,7 @@ class GtkPackage(package.Package):
         return self._create_nuget_package(paths, output_dir)
 
     def _list_libraries_dependencies(self):
+        os.environ['PATH'] = self.config.env['PATH']
         deps_tracker = DepsTracker(self.config.target_platform,
                                    self.config.prefix)
         files = []
