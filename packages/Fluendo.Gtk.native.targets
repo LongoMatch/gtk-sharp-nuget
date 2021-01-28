@@ -24,6 +24,6 @@
               Include="$(MSBuildThisFileDirectory)..\runtime\$(FluendoGTKPlatform)\native\**"
               Link="%(RecursiveDir)%(Filename)%(Extension)"
               Visible="false"
-              CopyToOutputDirectory="PreserveNewest" />
+              CopyToOutputDirectory="Always" />
     </ItemGroup>
 </Project>
