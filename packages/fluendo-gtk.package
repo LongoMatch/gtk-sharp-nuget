@@ -87,13 +87,6 @@ class GtkPackage(package.Package):
             if not os.path.exists(os.path.dirname(dst)):
                 os.makedirs(os.path.dirname(dst))
             shutil.copy(src, dst)
-            if self.config.target_platform == Platform.DARWIN:
-                for lib in OSXRelocator.list_shared_libraries(dst):
-                    if not lib.startswith("@rpath"):
-                        continue
-                    new_lib = lib.replace("@rpath/lib", "@rpath")
-                    cmd = 'install_name_tool -change {} {} {}'.format(lib, new_lib, dst)
-                    shell.call(cmd, fail=False)
         shutil.copy(self.relative_path('Fluendo.Gtk.native.targets'),
                     os.path.join(tmpdir, 'Fluendo.Gtk.{}.targets'.format(platform)))
         if self.strip:
