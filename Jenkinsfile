@@ -1,11 +1,28 @@
 boolean uploadPackage = false
-boolean isdevel = false
 
 pipeline {
     agent none
 
     stages{
         
+        stage("Check branch") {
+            agent { label "minimac-longomatch-macos" }
+            steps{
+                script{
+                    catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Fails in check branch stage') {
+                        if (env.BRANCH_NAME != null) {
+                            if (env.BRANCH_NAME == 'master') {
+                                uploadPackage = true
+                            } else {
+                                uploadPackage = false
+                            }
+                        }
+                        echo "LongoMatch ${env.BRANCH_NAME} branch found"
+                    }
+                }
+            }
+        }
+
         stage("Build") {
             steps {
                 script {
@@ -77,10 +94,14 @@ pipeline {
                                             filedestin = sh(script:"pwd", returnStdout: true).trim() + "/filelist.txt"
                                         }
 
-                                        // deploy of package to officestorage and nuget server
-                                        //-----------------------------------------------------
-                                        deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext, buildarch)
-                                        //-----------------------------------------------------
+                                        if (uploadPackage) {
+                                         
+                                            // deploy of package to officestorage and nuget server
+                                            //-----------------------------------------------------------------
+                                            deployCDpackage(filedestin, pkgname, pkgnameOS, pkgext, buildarch)
+                                            //-----------------------------------------------------------------
+
+                                        }
 
                                     }
 
